@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Сверяет коммит, результат CI и то, что реально отдаёт опубликованный сайт, и выдаёт JSON-квитанцию выпуска.">
+<title>Release Receipt — квитанция выпуска</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#1b1f24;--mut:#5b6573;--line:#dde1e7;--acc:#0b6bcb;--acc-ink:#fff;--ok:#17803d;--bad:#b42318;--warn:#a15c07}
+@media(prefers-color-scheme:dark){:root{--bg:#14171b;--card:#1d2127;--ink:#eef0f3;--mut:#9aa4b2;--line:#2c323b;--acc:#5aa9ff;--acc-ink:#0b1220;--ok:#4ade80;--bad:#f87171;--warn:#fbbf24}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:820px;margin:0 auto;padding:24px 16px 48px}
+h1{margin:0 0 4px;font-size:1.7rem}h2{margin:0 0 10px;font-size:1rem}
+.sub{color:var(--mut);margin:0 0 18px}.mut{color:var(--mut)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+label{display:block;font-size:.85rem;color:var(--mut);margin:0 0 4px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:600px){.grid{grid-template-columns:1fr}}
+.full{grid-column:1/-1}
+input{width:100%;height:42px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;font-family:ui-monospace,Consolas,monospace;font-size:.9rem}
+input:focus-visible,button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+button{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 12px;min-height:40px;cursor:pointer}
+button:hover{border-color:var(--mut)}
+button.primary{background:var(--acc);border-color:var(--acc);color:var(--acc-ink);font-weight:600}
+.scen{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
+.scen button{text-align:left}.scen small{display:block;color:var(--mut)}
+.verdict{display:inline-block;font-weight:700;border-radius:999px;padding:4px 14px;border:2px solid currentColor}
+.verdict[data-verdict=match]{color:var(--ok)}.verdict[data-verdict=mismatch]{color:var(--bad)}.verdict[data-verdict=unverifiable]{color:var(--warn)}
+.checks{list-style:none;padding:0;margin:12px 0}
+.checks li{display:grid;grid-template-columns:24px 150px 1fr;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)}
+@media(max-width:600px){.checks li{grid-template-columns:24px 1fr}.checks li span:last-child{grid-column:2}}
+.checks [data-status=ok] .m{color:var(--ok)}.checks [data-status=fail] .m{color:var(--bad)}.checks [data-status=error] .m{color:var(--warn)}
+.checks b{font-weight:600}
+pre{margin:0;padding:12px;background:var(--bg);border:1px solid var(--line);border-radius:8px;overflow:auto;font-size:.8rem;max-height:340px}
+#error{color:var(--bad);margin:10px 0 0}
+a{color:var(--acc)}footer{color:var(--mut);font-size:.85rem}
+</style>
+</head>
+<body>
+<main>
+<h1>Release Receipt</h1>
+<p class="sub">Выпущено ли именно то, что вы проверили? Сверяем ожидаемый коммит, результат CI и версию, которую реально отдаёт сайт.</p>
+
+<section class="card" aria-label="Проверка своего сайта">
+  <h2>Проверить сайт</h2>
+  <form id="form" class="grid">
+    <div class="full"><label for="site">Адрес сайта (должен отдавать version.json)</label><input id="site" name="site" type="url" required spellcheck="false" placeholder="https://example.github.io/app/"></div>
+    <div><label for="sha">Ожидаемый коммит (пусто: последний коммит main)</label><input id="sha" name="sha" spellcheck="false" placeholder="9f2c1ab…"></div>
+    <div><label for="repo">Репозиторий для проверки CI (необязательно)</label><input id="repo" name="repo" spellcheck="false" placeholder="owner/name"></div>
+    <div class="full"><label for="workflows">Обязательные workflow через запятую (необязательно)</label><input id="workflows" name="workflows" spellcheck="false" placeholder="CI"></div>
+    <div class="full btns" style="margin-top:0">
+      <button class="primary" type="submit" data-testid="run">Проверить</button>
+      <button type="button" id="self" data-testid="fill-self">Подставить данные этого сайта</button>
+    </div>
+  </form>
+  <p id="error" role="alert" data-testid="error" hidden></p>
+</section>
+
+<section class="card" aria-label="Демо-сценарии">
+  <h2>Демо-сценарии на вымышленных данных</h2>
+  <div class="scen" id="scen"></div>
+</section>
+
+<section class="card" id="result" aria-live="polite" hidden>
+  <h2>Квитанция</h2>
+  <p><span class="verdict" id="verdict" data-testid="verdict"></span> <span id="demo-note" class="mut"></span></p>
+  <p id="summary" data-testid="summary"></p>
+  <ul class="checks" id="checks"></ul>
+  <pre id="json" data-testid="receipt-json"></pre>
+  <div class="btns">
+    <button type="button" id="copy">Копировать JSON</button>
+    <button type="button" id="download">Скачать receipt.json</button>
+  </div>
+</section>
+
+<footer>
+  <a href="https://github.com/Oleg4311/release-receipt">Исходный код и CLI</a> · Проверка выполняется в вашем браузере, данные никуда не отправляются, кроме запросов к сайту и к GitHub API.
+</footer>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
