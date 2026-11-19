@@ -35,6 +35,7 @@ test('сценарий «Сайт недоступен»: не расхожде�
 
 test('квитанция — валидный JSON со схемой', async ({ page }) => {
   await page.getByTestId('scenario-stale').click();
+  await expect(page.getByTestId('verdict')).toHaveAttribute('data-verdict', 'mismatch'); // ждём, пока проверка завершится
   const receipt = JSON.parse(await page.getByTestId('receipt-json').innerText());
   expect(receipt.schema).toBe('release-receipt/1');
   expect(receipt.verdict).toBe('mismatch');
