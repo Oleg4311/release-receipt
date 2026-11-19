@@ -1,0 +1,32 @@
+name: Release
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build:cli
+      - run: node scripts/example-receipt.mjs dist/example-receipt.json
+      - name: Проверка собранного файла
+        run: |
+          node dist/release-receipt.mjs --version
+          (cd dist && sha256sum -c release-receipt.mjs.sha256)
+      - name: Публикация релиза
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          gh release create "$GITHUB_REF_NAME"
+          dist/release-receipt.mjs dist/release-receipt.mjs.sha256 dist/example-receipt.json
+          --title "Release Receipt $GITHUB_REF_NAME"
+          --notes "CLI одним файлом (нужен Node.js 24+). Проверьте SHA-256 из release-receipt.mjs.sha256. example-receipt.json: пример квитанции (сайт отстаёт) на вымышленных данных. Подробнее в README."
