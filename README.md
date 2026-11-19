@@ -88,4 +88,8 @@ TypeScript исполняется напрямую (type stripping в Node 24), 
 
 ## Лицензия
 
-MIT
+MIT · Сделано с помощью Claude
+
+## English
+
+**Release Receipt** answers "is what we released what we tested?". It compares the commit that should be released, the CI result for that commit and the version the published site actually serves (`version.json`), exits non-zero on mismatch (1) or when it cannot tell (2), and writes a JSON receipt. `stamp` creates `version.json` at build time, `--wait` polls until the deployment catches up. The CLI has no runtime dependencies (TypeScript runs directly on Node 24) and the browser demo uses the same core logic. Release assets carry build provenance attestations: `gh attestation verify release-receipt.mjs --repo Oleg4311/release-receipt`.
