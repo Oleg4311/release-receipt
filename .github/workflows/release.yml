@@ -4,12 +4,14 @@ on:
     tags: ["v*"]
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
           cache: npm
@@ -22,6 +24,11 @@ jobs:
         run: |
           node dist/release-receipt.mjs --version
           (cd dist && sha256sum -c release-receipt.mjs.sha256)
+      - name: Подтверждение происхождения (provenance)
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
+        with:
+          subject-path: |
+            dist/release-receipt.mjs
       - name: Публикация релиза
         env:
           GH_TOKEN: ${{ github.token }}

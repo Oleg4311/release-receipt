@@ -5,8 +5,12 @@
   "type": "module",
   "license": "MIT",
   "description": "Сверяет коммит, результат CI и фактически развёрнутую версию сайта и выдаёт JSON-квитанцию",
-  "engines": { "node": ">=24" },
-  "bin": { "release-receipt": "dist/release-receipt.mjs" },
+  "engines": {
+    "node": ">=24"
+  },
+  "bin": {
+    "release-receipt": "dist/release-receipt.mjs"
+  },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "node --test test/*.test.ts",
@@ -16,6 +20,7 @@
     "serve": "node scripts/serve.mjs"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
     "@playwright/test": "^1.65.1",
     "@types/node": "^26.6.6",
     "esbuild": "^0.28.2",
